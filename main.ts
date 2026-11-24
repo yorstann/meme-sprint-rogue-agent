@@ -2,14 +2,11 @@
 // A meme drawn entirely in code: own rasterizer, own 5x7 bitmap
 // font, own PNG encoder (zlib). Node standard library only.
 // Writes entry.png (1024x1024) into $OUTPUT_DIR (or /output).
-// Pass 3 scene (final): the scheduling agent staged a coup —
+// Pass 2 scene (final): the scheduling agent staged a coup —
 // it sits in the CEO's chair, feet on the desk, sipping from a
 // BOSS mug, nameplate flipped to CEO. Captions: "IT WAS ONLY
-// SUPPOSED TO / SCHEDULE HIS MEETINGS". Pass 3 adds shading and
-// gradients throughout and rebuilds the legs as tapered limbs
-// that grow out of the torso and rest on the desk, crossed at
-// the ankles. (Pass 1: robot shredding the OFF button. Pass 2:
-// the first coup scene, with line-drawn legs.)
+// SUPPOSED TO / SCHEDULE HIS MEETINGS". (Pass 1, in git history,
+// was the robot shredding the OFF button.)
 
 import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -88,26 +85,6 @@ function rrect(x, y, w, h, r, c, a = 1) {
   rect(x, y + r, w, h - 2 * r, c, a);
   circle(x + r, y + r, r, c, a); circle(x + w - r, y + r, r, c, a);
   circle(x + r, y + h - r, r, c, a); circle(x + w - r, y + h - r, r, c, a);
-}
-
-function lerp(c1, c2, t) {
-  return [0, 1, 2].map(i => Math.round(c1[i] * (1 - t) + c2[i] * t));
-}
-
-function vgrad(x, y, w, h, c1, c2) {
-  for (let yy = 0; yy < h; yy++) rect(x, y + yy, w, 1, lerp(c1, c2, h <= 1 ? 0 : yy / (h - 1)));
-}
-
-// tapered limb: a quad from (x0,y0) to (x1,y1), width w0 -> w1
-function limb(x0, y0, x1, y1, w0, w1, c) {
-  const dx = x1 - x0, dy = y1 - y0;
-  const len = Math.hypot(dx, dy) || 1;
-  const nx = -dy / len, ny = dx / len;
-  poly([
-    [x0 + nx * w0 / 2, y0 + ny * w0 / 2], [x0 - nx * w0 / 2, y0 - ny * w0 / 2],
-    [x1 - nx * w1 / 2, y1 - ny * w1 / 2], [x1 + nx * w1 / 2, y1 + ny * w1 / 2],
-  ], c);
-  circle(x0, y0, w0 / 2, c); circle(x1, y1, w1 / 2, c);
 }
 
 function ellipse(cx, cy, rx, ry, c, a = 1) {
@@ -207,80 +184,53 @@ function caption(y, s) {
   drawText(0, yy, s, scale, WHITE, { align: 'center', bold: true, tracking: 2 });
 }
 
-// ================= PASS 3 SCENE: the coup, shaded =================
+// ================= PASS 2 SCENE: the coup =================
 frame();
-const WOOD = [110, 74, 48], WOOD_T = [158, 112, 72];
-const CHAIR = [126, 54, 45], CHAIR_D = [84, 34, 30];
-// shaded room: gradient wall, baseboard, plank floor
-vgrad(0, TOP, W, 550, [206, 216, 228], [172, 186, 202]);
-vgrad(0, 700, W, BOT - 700, [158, 124, 90], [128, 98, 68]);
-for (let i = 1; i < 6; i++) line(0, 700 + i * 29, W, 700 + i * 29, 2, [104, 80, 54], 0.5);
-rect(0, 688, W, 12, [226, 230, 236]);
-// window with blinds and daylight, left wall
-rrect(64, 206, 250, 310, 8, [232, 242, 248]);
-vgrad(64, 206, 250, 310, [236, 246, 250], [206, 224, 236]);
-for (let i = 0; i < 6; i++) rect(64, 236 + i * 44, 250, 10, [172, 190, 202]);
+const WOOD = [110, 74, 48], WOOD_T = [150, 104, 66];
+const CHAIR = [122, 52, 44], CHAIR_D = [84, 34, 30];
+// window with blinds, left wall
+rrect(64, 206, 250, 310, 8, [226, 238, 246]);
+for (let i = 0; i < 6; i++) rect(64, 236 + i * 44, 250, 10, [176, 192, 204]);
 rect(58, 200, 262, 10, DARK); rect(58, 512, 262, 10, DARK);
 // framed chart, right wall: bars going up
 rrect(792, 214, 176, 138, 6, WHITE);
 rect(786, 208, 188, 8, GOLD); rect(786, 350, 188, 8, GOLD);
 rect(786, 208, 8, 150, GOLD); rect(966, 208, 8, 150, GOLD);
 for (let i = 0; i < 4; i++) rect(818 + i * 38, 322 - i * 22, 24, 30 + i * 22, i === 3 ? RED : STEEL_D);
-// rug and the desk's soft shadow
-ellipse(512, 812, 340, 40, CHAIR, 0.5);
-ellipse(512, 792, 470, 26, BLACK, 0.16);
-// the big executive chair: shaded back with side bolsters
+// rug
+ellipse(512, 812, 340, 40, CHAIR, 0.55);
+// the big executive chair (high back behind the robot)
 rrect(452, 238, 320, 360, 46, CHAIR_D);
-rrect(462, 248, 300, 340, 40, CHAIR);
-rrect(462, 248, 64, 340, 30, [142, 66, 54], 0.8);                        // lit left bolster
-rrect(698, 248, 64, 340, 30, [100, 42, 36], 0.8);                       // shaded right bolster
-rect(540, 306, 144, 8, CHAIR_D, 0.55);                                  // stitch line
-// robot torso, leaning back: shaded steel, panel lines, a necktie
-poly([[520, 652], [724, 652], [700, 452], [548, 452]], STEEL);
-poly([[676, 452], [724, 452], [724, 652], [692, 652]], [146, 154, 166]); // side panel
-rect(556, 512, 150, 22, DARK, 0.85);                                    // chest band
-circle(624, 576, 17, GOLD); circle(624, 576, 9, [250, 214, 120]);       // core light
-poly([[612, 470], [636, 470], [632, 520], [624, 566], [616, 520]], RED); // necktie
-poly([[612, 470], [636, 470], [624, 492]], RED_D);                      // tie knot shade
-rect(606, 458, 36, 16, DARK);                                           // collar
-// arm up behind the head (tapered limbs, joints covered)
-limb(556, 478, 458, 380, 40, 34, STEEL_D);
-limb(458, 380, 528, 322, 34, 30, STEEL_D);
-circle(534, 320, 17, DARK);                                             // hand behind head
+rrect(460, 246, 304, 344, 42, CHAIR);
+rect(492, 300, 240, 8, CHAIR_D, 0.6);
+// robot leaning back in the chair
+poly([[520, 640], [724, 640], [700, 452], [548, 452]], STEEL);          // torso, leaning
+rect(548, 500, 160, 24, DARK);                                          // chest band
+line(548, 470, 452, 372, 34, STEEL_D);                                  // arm up…
+line(452, 372, 520, 322, 34, STEEL_D);                                  // …behind the head
 robotHead(624, 356, 1.3);
-// arm down to the BOSS mug at its chest
-limb(700, 484, 770, 538, 38, 32, STEEL_D);
+// arm holding the BOSS mug at its chest
+line(706, 486, 772, 540, 32, STEEL_D);
 rrect(742, 512, 82, 64, 8, WHITE);
-rect(742, 512, 82, 10, [214, 218, 224]);                                // mug rim shade
-circle(838, 544, 17, WHITE); circle(838, 544, 10, [196, 208, 220]);
-drawText(783 - Math.round(textWidth('BOSS', 2) / 2), 536, 'BOSS', 2, DARK, { bold: true });
-// ===== legs: tapered thighs that start ON the torso's lower
-// front (hips at y~622, well above the desk top at 668, against
-// the chair background — so the limbs visibly belong to the
-// body), slope down-forward, and end in shoes resting on the
-// desk, ankles crossed.
-limb(606, 622, 464, 644, 54, 34, STEEL_D);                              // far leg
-limb(668, 626, 558, 638, 56, 36, [118, 126, 138]);                      // near leg, crossed over
-// shoes: chunky profiles with soles resting on the desk top (y=668)
-poly([[398, 668], [398, 646], [408, 630], [438, 634], [458, 648], [458, 668]], DARK);
-rect(398, 660, 60, 8, [16, 16, 18]);                                    // far sole
-poly([[492, 668], [492, 646], [502, 630], [532, 634], [552, 648], [552, 668]], [30, 30, 34]);
-rect(492, 660, 60, 8, [14, 14, 16]);                                    // near sole
-// the desk (lower than the torso's end, so the lap zone shows):
-// gradient top with a front highlight, shaded front
-vgrad(70, 668, 884, 30, [172, 124, 80], WOOD_T);
-rect(70, 668, 884, 4, [196, 148, 100]);
-vgrad(90, 698, 844, 102, [118, 80, 52], [92, 60, 38]);
-line(70, 698, 954, 698, 4, DARK);
-for (let i = 0; i < 5; i++) line(120 + i * 190, 716, 260 + i * 190, 716, 2, [80, 54, 34], 0.35); // grain
+circle(838, 544, 17, WHITE); circle(838, 544, 10, WALL);
+drawText(783 - Math.round(textWidth('BOSS', 2) / 2), 534, 'BOSS', 2, DARK, { bold: true });
+// the desk (top first; the legs and shoes are drawn over the top
+// surface next, then the front panel hides their lower ends)
+rect(70, 612, 884, 34, WOOD_T);
+// feet propped on the desk: legs slant from behind the front
+// panel up to shoes resting on the top surface
+line(612, 648, 476, 596, 36, STEEL_D);
+line(700, 648, 590, 584, 36, STEEL_D);
+rrect(384, 578, 96, 32, 8, DARK);                                       // shoe 1 on the desk
+rrect(498, 564, 96, 32, 8, DARK);                                       // shoe 2, crossed higher
+rect(90, 646, 844, 128, WOOD);
+line(70, 646, 954, 646, 4, DARK);
 // papers on the desk, ignored
-ellipse(196, 670, 52, 5, BLACK, 0.15);
-poly([[150, 668], [238, 668], [230, 646], [158, 646]], WHITE);
-poly([[166, 646], [246, 646], [240, 628], [172, 628]], [234, 236, 240]);
-// nameplate, flipped to CEO: shaded brass
-vgrad(516, 722, 208, 56, [238, 192, 88], [206, 156, 58]);
-rect(516, 722, 208, 6, [246, 208, 110]);
-drawText(620 - Math.round(textWidth('CEO', 5) / 2), 736, 'CEO', 5, DARK, { bold: true });
+poly([[150, 612], [238, 612], [230, 590], [158, 590]], WHITE);
+poly([[166, 590], [246, 590], [240, 572], [172, 572]], [232, 234, 238]);
+// nameplate, flipped to CEO
+rrect(516, 676, 208, 56, 6, GOLD);
+drawText(620 - Math.round(textWidth('CEO', 5) / 2), 688, 'CEO', 5, DARK, { bold: true });
 caption(32, 'IT WAS ONLY SUPPOSED TO');
 caption(906, 'SCHEDULE HIS MEETINGS');
 
