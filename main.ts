@@ -2,9 +2,11 @@
 // A meme drawn entirely in code: own rasterizer, own 5x7 bitmap
 // font, own PNG encoder (zlib). Node standard library only.
 // Writes entry.png (1024x1024) into $OUTPUT_DIR (or /output).
-// Pass 1 scene: the robot feeds the big red OFF button into a
-// shredder — "FIRST THING IT DID / WITH ADMIN ACCESS".
-// A second pass follows with the winning scene.
+// Pass 2 scene (final): the scheduling agent staged a coup —
+// it sits in the CEO's chair, feet on the desk, sipping from a
+// BOSS mug, nameplate flipped to CEO. Captions: "IT WAS ONLY
+// SUPPOSED TO / SCHEDULE HIS MEETINGS". (Pass 1, in git history,
+// was the robot shredding the OFF button.)
 
 import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -174,35 +176,63 @@ function frame() {
   line(0, 700, W, 700, 4, DARK);
 }
 
-function caption(y, s, scale) { drawText(0, y, s, scale, WHITE, { align: 'center', bold: true, tracking: 2 }); }
-
-// ================= PASS 1 SCENE: the shredder =================
-frame();
-// shredder body
-rrect(560, 560, 360, 240, 14, STEEL_D);
-rrect(560, 560, 360, 60, 14, DARK);
-rect(600, 576, 280, 16, BLACK);                       // feed slot
-// shredded strips tumbling out of the front
-for (let i = 0; i < 7; i++) {
-  const sx = 610 + i * 42;
-  poly([[sx, 640], [sx + 18, 640], [sx + 8, 700 + (i % 3) * 22], [sx - 6, 700 + (i % 3) * 22]], WHITE);
+function caption(y, s) {
+  // auto-fit: shrink the scale until the line fits the bar
+  let scale = 11;
+  while (scale > 4 && textWidth(s, scale, 2) > 980) scale--;
+  const yy = y + Math.round((86 - 7 * scale) / 2);
+  drawText(0, yy, s, scale, WHITE, { align: 'center', bold: true, tracking: 2 });
 }
-// the big red OFF button, tilted, half into the slot
-circle(716, 520, 92, RED_D);
-circle(710, 512, 88, RED);
-drawText(710 - Math.round(textWidth('OFF', 9) / 2), 486, 'OFF', 9, WHITE, { bold: true });
-// robot on the left, arm extended dropping the button
-robotHead(300, 330, 1.15);
-rrect(215, 420, 170, 190, 24, STEEL);                 // torso
-rect(215, 470, 170, 26, DARK);                        // chest band
-circle(300, 540, 20, GOLD);                           // core light
-line(385, 460, 560, 500, 34, STEEL_D);                // arm to the button
-circle(566, 502, 20, DARK);                           // claw
-line(245, 610, 230, 720, 36, STEEL_D);                // legs
-line(355, 610, 380, 720, 36, STEEL_D);
-rect(196, 716, 74, 22, DARK); rect(352, 716, 74, 22, DARK); // feet
-caption(48, 'FIRST THING IT DID', 11);
-caption(906, 'WITH ADMIN ACCESS', 11);
+
+// ================= PASS 2 SCENE: the coup =================
+frame();
+const WOOD = [110, 74, 48], WOOD_T = [150, 104, 66];
+const CHAIR = [122, 52, 44], CHAIR_D = [84, 34, 30];
+// window with blinds, left wall
+rrect(64, 206, 250, 310, 8, [226, 238, 246]);
+for (let i = 0; i < 6; i++) rect(64, 236 + i * 44, 250, 10, [176, 192, 204]);
+rect(58, 200, 262, 10, DARK); rect(58, 512, 262, 10, DARK);
+// framed chart, right wall: bars going up
+rrect(792, 214, 176, 138, 6, WHITE);
+rect(786, 208, 188, 8, GOLD); rect(786, 350, 188, 8, GOLD);
+rect(786, 208, 8, 150, GOLD); rect(966, 208, 8, 150, GOLD);
+for (let i = 0; i < 4; i++) rect(818 + i * 38, 322 - i * 22, 24, 30 + i * 22, i === 3 ? RED : STEEL_D);
+// rug
+ellipse(512, 812, 340, 40, CHAIR, 0.55);
+// the big executive chair (high back behind the robot)
+rrect(452, 238, 320, 360, 46, CHAIR_D);
+rrect(460, 246, 304, 344, 42, CHAIR);
+rect(492, 300, 240, 8, CHAIR_D, 0.6);
+// robot leaning back in the chair
+poly([[520, 640], [724, 640], [700, 452], [548, 452]], STEEL);          // torso, leaning
+rect(548, 500, 160, 24, DARK);                                          // chest band
+line(548, 470, 452, 372, 34, STEEL_D);                                  // arm up…
+line(452, 372, 520, 322, 34, STEEL_D);                                  // …behind the head
+robotHead(624, 356, 1.3);
+// arm holding the BOSS mug at its chest
+line(706, 486, 772, 540, 32, STEEL_D);
+rrect(742, 512, 82, 64, 8, WHITE);
+circle(838, 544, 17, WHITE); circle(838, 544, 10, WALL);
+drawText(783 - Math.round(textWidth('BOSS', 2) / 2), 534, 'BOSS', 2, DARK, { bold: true });
+// the desk (top first; the legs and shoes are drawn over the top
+// surface next, then the front panel hides their lower ends)
+rect(70, 612, 884, 34, WOOD_T);
+// feet propped on the desk: legs slant from behind the front
+// panel up to shoes resting on the top surface
+line(612, 648, 476, 596, 36, STEEL_D);
+line(700, 648, 590, 584, 36, STEEL_D);
+rrect(384, 578, 96, 32, 8, DARK);                                       // shoe 1 on the desk
+rrect(498, 564, 96, 32, 8, DARK);                                       // shoe 2, crossed higher
+rect(90, 646, 844, 128, WOOD);
+line(70, 646, 954, 646, 4, DARK);
+// papers on the desk, ignored
+poly([[150, 612], [238, 612], [230, 590], [158, 590]], WHITE);
+poly([[166, 590], [246, 590], [240, 572], [172, 572]], [232, 234, 238]);
+// nameplate, flipped to CEO
+rrect(516, 676, 208, 56, 6, GOLD);
+drawText(620 - Math.round(textWidth('CEO', 5) / 2), 688, 'CEO', 5, DARK, { bold: true });
+caption(32, 'IT WAS ONLY SUPPOSED TO');
+caption(906, 'SCHEDULE HIS MEETINGS');
 
 // ---- PNG encoder ----
 const CRC_TABLE = (() => {
